@@ -1,10 +1,17 @@
 import re
 import openai
 import os
+import sys
 
 def clear_screen():
     """Clears the terminal screen."""
     os.system('cls' if os.name == 'nt' else 'clear')
+
+def global_exception_handler(exctype, value, traceback):
+    print("There seemed to have been an issue with the API, please retry running the script")
+
+# Set the global exception handler
+sys.excepthook = global_exception_handler
 
 def read_api_key(file_path):
     with open(file_path, 'r') as file:
@@ -84,7 +91,7 @@ chapters = re.findall(pattern, response, re.MULTILINE | re.DOTALL)
 write_file('Chapters.md', response, 'w')  # 'w' mode will overwrite the existing file
 
 # Fact based functionality.
-if chatGPT_author_type == "non-fiction" or "educational" or "scientific" or "self-help":
+if chatGPT_author_type in ["non-fiction", "educational", "scientific", "self-help"]:
     for chapter_number, chapter in enumerate(chapters, start=1):
         chapter_responses = get_gpt_response(generate_questions(chatGPT_author_type, user_input, f"The current chapter you are writing: {chapter}"))
         chapter_file_name = f"Chapter{chapter_number}.md"
@@ -102,7 +109,7 @@ if chatGPT_author_type == "non-fiction" or "educational" or "scientific" or "sel
                     print(f"Invalid line format: {line}")
 
 # Story based functionality.
-if chatGPT_author_type == "fiction" or "sci-fi" or "teen fantasy" or "romance" or "mystery" or "historical fiction" or "horror" or "adventure":
+if chatGPT_author_type in ["fiction", "sci-fi", "teen fantasy", "romance", "mystery", "historical fiction", "horror", "adventure"]:
     story_continuation = ""
     story_continuation_deduped = ""
     # Generate Characters and Defining traits
