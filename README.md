@@ -8,6 +8,7 @@ This repository contains a Python script for generating a book using OpenAI's Ch
     1. [Installation](#installation)
 2. [Usage](#usage)
 3. [Script Explanation](#script-explanation)
+4. [Future ideas](#future-ideas)
 
 ## Getting Started
 
@@ -73,3 +74,7 @@ python main.py
 ### Customization
 - The script can be easily customized to fit your specific requirements. For example, you can change the list of valid author types, the maximum retries for handling API rate limits, or the format of the chapter files.
 
+## Future Ideas
+1. Depending on what type of author you choose from ChatGPT, different formatting and requests could be made. 
+    1. Example: Choosing teen fantasy, it should generate a list of characters and personalities which we can attach, or extract that information as a short form version of the longer text as a seperate request like 'shorten this for only the key information' then apply that to the next request. This would help with keeping consistence characters throughout the story.
+    2. Making ChatGPT apply 'image' tags to areas of the response text so we can go through later and find where we should add some images.
