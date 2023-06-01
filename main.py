@@ -1,26 +1,30 @@
 import re
 import openai
+import os
+
+def clear_screen():
+    """Clears the terminal screen."""
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def read_api_key(file_path):
+    with open(file_path, 'r') as file:
+        return file.read().strip()
 
 # Read the API key from key.txt
-with open('../key.txt', 'r') as file:
-    api_key = file.read().strip()
+openai.api_key = read_api_key('../key.txt')
 
-openai.api_key = api_key
+def get_user_choice(options):
+    while True:
+        print("Chat GPT is a ________ author\nChoice:")
+        for i, opt in enumerate(options, 1):
+            print(f"{i}. {opt}")
+        choice = input()
+        if choice.isdigit() and int(choice) in range(1, len(options) + 1):
+            return options[int(choice) - 1]
+        else:
+            print("Invalid choice. Please enter a valid option number.")
 
-valid_options = ["fiction", "non-fiction", "sci-fi", "children's book", "teen fantasy", "educational", "scientific", "romance", "mystery", "biography", "historical fiction", "self-help", "horror", "poetry", "adventure"]
-
-while True:
-    chatGPT_author_type = input("Chat GPT is a ________ author\nChoice:\n1. fiction\n2. non-fiction\n3. sci-fi\n4. children's book\n5. teen fantasy\n6. educational\n7. scientific\n8. romance\n9. mystery\n10. biography\n11. historical fiction\n12. self-help\n13. horror\n14. poetry\n15. adventure\n")
-    
-    if chatGPT_author_type.isdigit() and int(chatGPT_author_type) in range(1, len(valid_options) + 1):
-        chatGPT_author_type = valid_options[int(chatGPT_author_type) - 1]
-        break
-    else:
-        print("Invalid choice. Please enter a valid option number.")
-
-user_input = input("Chat GPT is a " + chatGPT_author_type + " author writing a book about: ")
-
-def generate_gpt_response(messages, max_retries=5):
+def get_gpt_response(messages, max_retries=5):
     retry_count = 0
     while retry_count <= max_retries:
         try:
@@ -32,7 +36,7 @@ def generate_gpt_response(messages, max_retries=5):
                 stop=None,
                 temperature=0.5,
             )
-            return response.choices[0].message['content'].strip()
+            return response.choices[0].message['content']
         except openai.error.RateLimitError:
             retry_count += 1
             if retry_count <= max_retries:
@@ -40,91 +44,80 @@ def generate_gpt_response(messages, max_retries=5):
                 continue
             else:
                 raise
-question = [
-    {
-        "role": "system",
-        "content": f"You are an {chatGPT_author_type} author writing a book about {user_input}"
-    },
-    {
-        "role": "user",
-        "content": "Write the chapter index and the details to be covered in each chapter. Each Chapter must contain a sub menu.\n\nExample:\n"
-                   "Chapter 1. Introduction to Penetration Testing\n"
-                   "Definition and purpose of penetration testing\n"
-                   "Types of penetration testing\n"
-                   "The importance of penetration testing in cybersecurity"
-    }
-]
 
-response = generate_gpt_response(question)
+def write_file(file_name, content, mode='w'):
+    with open(file_name, mode) as file:
+        file.write(content)
 
-question = [
-    {
-        "role": "system",
-        "content": f"You are an {chatGPT_author_type} author writing a book about {user_input}"
-    },
-    {
-        "role": "user",
-        "content": f"1. Here is your chapter list, it seems it is not as indepth as it should be. "
-                   f"2. Make sure the list has ALL (at least 10 where possible) tools not just a few for each chapter. \n{response}"
-    }
-]
+def create_message(role, content):
+    return {"role": role, "content": content}
 
-response = generate_gpt_response(question)
-pattern = r'Chapter \d+\..*?(?=Chapter \d+\.|\Z)'  # Updated regex pattern
-chapters = re.findall(pattern, response, re.MULTILINE | re.DOTALL)  # Find all matches in the response text
-with open('Chapters.md', 'w') as file:
-    file.write('\n'.join(chapters))
-
-for chapter_number, chapter in enumerate(chapters, start=1):
-    chapter_question = [
-        {
-            "role": "system",
-            "content": f"You are an {chatGPT_author_type} author writing a book about {user_input}"
-        },
-        {
-            "role": "user",
-            "content": f"The current chapter you are writing: {chapter}"
-        }
+def generate_questions(author_type, user_input, user_content):
+    return [
+        create_message("system", f"You are an {author_type} author writing a book about {user_input}"),
+        create_message("user", user_content)
     ]
-    print(f"Chapter and its subchapters: {chapter}")
-    chapter_responses = generate_gpt_response(chapter_question)
 
-    # Generate the file name for the current chapter
-    chapter_file_name = f"Chapter{chapter_number}.md"
+# Set User Input:
+valid_options = ["fiction", "non-fiction", "sci-fi", "children's book", "teen fantasy", "educational", "scientific", "romance", "mystery", "biography", "historical fiction", "self-help", "horror", "poetry", "adventure"]
+chatGPT_author_type = get_user_choice(valid_options)
+clear_screen()
+user_input = input(f"Chat GPT is a {chatGPT_author_type} author writing a book about: ")
+clear_screen()
+print(f"Chat GPT is a {chatGPT_author_type} author writing a book about {user_input}")
 
-    with open(chapter_file_name, 'w') as file:
-        file.write(chapter_responses)
+# Initial Question:
+print("Creating your chapter list now...")
+initial_question = generate_questions(chatGPT_author_type, user_input, "Write the chapter index and the details to be covered in each chapter. Each Chapter must contain a sub menu.")
+response = get_gpt_response(initial_question)
+print("Chapter list created...")
 
-    # Split the response into separate lines
-    lines = chapter_responses.split("\n")
+#Fixing/Expanding The Initial Question: (Commented out due to issues in response adding chapters and not including initial chapters)
+#second_question = generate_questions(chatGPT_author_type, user_input, f"Here is your chapter list, it seems it is not as indepth as it should be. Make sure the list has ALL tools if educational not just a few for each chapter. Start at Chapter 1. \n{response}")
+#response = get_gpt_response(second_question)
+#print(response)
 
-    # Regular expression pattern to match lines starting with a number
-    pattern = r'^\d+\.'
+# Extracting The Chapters:
+pattern = r'Chapter \d+[.: -].*?(?=Chapter \d+[.: -]|\Z)'
+chapters = re.findall(pattern, response, re.MULTILINE | re.DOTALL)
 
-    # Iterate over each line and process lines starting with a number
-    for line in lines:
-        if line.startswith(('1', '2', '3', '4', '5', '6', '7', '8', '9', '0')) and re.match(pattern, line):
-            # Extract the number and content after the number
-            split_result = re.split(r'\.\s', line, maxsplit=1)
-            if len(split_result) == 2:
-                number, content = split_result
-                explain_info = f"You should give in-depth examples, use multiple examples for each to help with understandingr:\n ```{content}```"
-                chapter_explanations = [
-                    {
-                        "role": "system",
-                        "content": f"You are an {chatGPT_author_type} author writing a book about {user_input}."
-                    },
-                    {
-                        "role": "user",
-                        "content": f"{explain_info}"
-                    }
-                ]
-                explain_info_response = generate_gpt_response(chapter_explanations)
-                print(explain_info_response)
+write_file('Chapters.md', response, 'w')  # 'w' mode will overwrite the existing file
 
-                # Append the explanations to the current chapter file
-                with open(chapter_file_name, 'a') as file:
-                    file.write(explain_info_response)
-            else:
-                # Handle the case where the line does not match the expected pattern
-                print(f"Invalid line format: {line}")
+# Fact based functionality.
+if chatGPT_author_type == "non-fiction" or "educational" or "scientific" or "self-help":
+    for chapter_number, chapter in enumerate(chapters, start=1):
+        chapter_responses = get_gpt_response(generate_questions(chatGPT_author_type, user_input, f"The current chapter you are writing: {chapter}"))
+        chapter_file_name = f"Chapter{chapter_number}.md"
+        write_file(chapter_file_name, chapter_responses)
+    
+        lines = chapter_responses.split("\n")
+        for line in lines:
+            if line.startswith(('1', '2', '3', '4', '5', '6', '7', '8', '9', '0')):
+                split_result = re.split(r'\.\s', line, maxsplit=1)
+                if len(split_result) == 2:
+                    explain_info = f"You should give in-depth examples, use multiple examples for each to help with understanding:\n ```{line}```"
+                    explanation = get_gpt_response(generate_questions(chatGPT_author_type, user_input, explain_info))
+                    write_file(chapter_file_name, explanation, mode='a')
+                else:
+                    print(f"Invalid line format: {line}")
+
+# Story based functionality.
+if chatGPT_author_type == "fiction" or "sci-fi" or "teen fantasy" or "romance" or "mystery" or "historical fiction" or "horror" or "adventure":
+    story_continuation = ""
+    story_continuation_deduped = ""
+    # Generate Characters and Defining traits
+    print(f"Generating Characters for your story.")
+    character_response = get_gpt_response(generate_questions(chatGPT_author_type, user_input, f"You need to create a list of characters for the story and some defining traits.\n {chapters}"))
+    for chapter_number, chapter in enumerate(chapters, start=1):
+        # Generate the first chapter
+        print(f"Generating Chapter {chapter_number}")
+        chapter_responses = get_gpt_response(generate_questions(chatGPT_author_type, user_input, f"List of all Chapters: ```{chapters}```\n\nThe current chapter you are writing: {chapter}\n Characters in the story: {character_response}\n Key information for the story so far:\n{story_continuation_deduped}"))
+        # Extract key information from the current chapter for future chapters:
+        print(f"Extracting Key Information From Chapter {chapter_number}")
+        story_continuation += get_gpt_response(generate_questions(chatGPT_author_type, user_input, f"Extract only the key information from this such as names, places, important details such as relationships between characters: {chapter_responses}"))
+        story_continuation_deduped = get_gpt_response(generate_questions(chatGPT_author_type, user_input, f"Clean up these keynotes: ```{story_continuation}```"))
+        chapter_file_name = f"Chapter{chapter_number}.md"
+        write_file(chapter_file_name, chapter_responses)
+        notes_taken = f"Notes_Taken.md"
+        if notes_taken:
+            write_file(notes_taken, story_continuation_deduped)
