@@ -131,7 +131,7 @@ if chatGPT_author_type in ["fiction", "sci-fi", "teen fantasy", "romance", "myst
     print(f"Generating Characters for your story.")
     character_response = get_gpt_response(generate_questions(chatGPT_author_type, user_input, f"You need to create a list of characters for the story and some defining traits. Make sure to give them names and descriptions\n {chapters}"))
     character_sheets = f"Character_Sheets.md"
-    if character_sheets:
+    if character_response:
         write_file(character_response)
     for chapter_number, chapter in enumerate(chapters, start=1):
         # Generate the first chapter
@@ -147,7 +147,7 @@ if chatGPT_author_type in ["fiction", "sci-fi", "teen fantasy", "romance", "myst
         if notes_taken:
             write_file(notes_taken, story_continuation_deduped)
 
-# Story based functionality.
+# Dungeons and Dragons functionality.
 if chatGPT_author_type in ["dungeons and dragons"]:
     character_sheets = f"Character_Sheets.md"
     if character_sheets:
