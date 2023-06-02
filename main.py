@@ -3,13 +3,18 @@ import openai
 import os
 import sys
 import time
+import traceback
 
 def clear_screen():
     """Clears the terminal screen."""
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def global_exception_handler(exctype, value, traceback):
-    print("There seemed to have been an issue with the API, please remove any remaining chapter documents and retry running the script")
+    print("An exception occurred:")
+    print("Exception type:", exctype)
+    print("Exception value:", value)
+    print("Traceback:")
+    traceback.print_tb(traceback)
 
 # Set the global exception handler
 sys.excepthook = global_exception_handler
@@ -105,13 +110,14 @@ if chatGPT_author_type in ["non-fiction", "educational", "scientific", "self-hel
         chapter_responses = get_gpt_response(generate_questions(chatGPT_author_type, user_input, f"The current chapter you are writing: {chapter}"))
         chapter_file_name = f"Chapter{chapter_number}.md"
         write_file(chapter_file_name, chapter_responses)
-    
+        print(f"Writing: Chapter {chapter_number}")
         lines = chapter_responses.split("\n")
         for line in lines:
             if line.startswith(('1', '2', '3', '4', '5', '6', '7', '8', '9', '0')):
                 split_result = re.split(r'\.\s', line, maxsplit=1)
                 if len(split_result) == 2:
                     explain_info = f"You should give in-depth examples, use multiple examples for each to help with understanding:\n ```{line}```"
+                    print(f"Getting more context for any numbered lists for Chapter {chapter_number}")
                     explanation = get_gpt_response(generate_questions(chatGPT_author_type, user_input, explain_info))
                     write_file(chapter_file_name, explanation, mode='a')
                 else:
