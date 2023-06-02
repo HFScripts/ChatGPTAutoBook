@@ -2,6 +2,9 @@
 
 This repository contains a Python script for generating a book using OpenAI's ChatGPT API.
 
+![BookCreation GIF](https://github.com/HFScripts/ChatGPTAutoBook/raw/main/non-fiction-social-media-influence/BookCreation.gif)
+
+
 ## Table of Contents
 1. [Getting Started](#getting-started)
     1. [Prerequisites](#prerequisites)
