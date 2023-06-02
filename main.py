@@ -2,13 +2,14 @@ import re
 import openai
 import os
 import sys
+import time
 
 def clear_screen():
     """Clears the terminal screen."""
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def global_exception_handler(exctype, value, traceback):
-    print("There seemed to have been an issue with the API, please retry running the script")
+    print("There seemed to have been an issue with the API, please remove any remaining chapter documents and retry running the script")
 
 # Set the global exception handler
 sys.excepthook = global_exception_handler
@@ -35,6 +36,14 @@ def get_gpt_response(messages, max_retries=5):
     retry_count = 0
     while retry_count <= max_retries:
         try:
+            # Check the length of the message
+            total_tokens = sum(len(message['content'].split()) for message in messages)
+            if total_tokens > 4000:
+                # Reduce the message length by removing characters from the end
+                while total_tokens > 4000:
+                    messages[-1]['content'] = messages[-1]['content'][:-1]
+                    total_tokens -= 1
+
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=messages,
@@ -66,7 +75,7 @@ def generate_questions(author_type, user_input, user_content):
     ]
 
 # Set User Input:
-valid_options = ["fiction", "non-fiction", "sci-fi", "children's book", "teen fantasy", "educational", "scientific", "romance", "mystery", "biography", "historical fiction", "self-help", "horror", "poetry", "adventure"]
+valid_options = ["fiction", "non-fiction", "sci-fi", "children's book", "teen fantasy", "educational", "scientific", "romance", "mystery", "biography", "historical fiction", "self-help", "horror", "poetry", "adventure", "dungeons and dragons"]
 chatGPT_author_type = get_user_choice(valid_options)
 clear_screen()
 user_input = input(f"Chat GPT is a {chatGPT_author_type} author writing a book about: ")
@@ -114,7 +123,10 @@ if chatGPT_author_type in ["fiction", "sci-fi", "teen fantasy", "romance", "myst
     story_continuation_deduped = ""
     # Generate Characters and Defining traits
     print(f"Generating Characters for your story.")
-    character_response = get_gpt_response(generate_questions(chatGPT_author_type, user_input, f"You need to create a list of characters for the story and some defining traits.\n {chapters}"))
+    character_response = get_gpt_response(generate_questions(chatGPT_author_type, user_input, f"You need to create a list of characters for the story and some defining traits. Make sure to give them names and descriptions\n {chapters}"))
+    character_sheets = f"Character_Sheets.md"
+    if character_sheets:
+        write_file(character_response)
     for chapter_number, chapter in enumerate(chapters, start=1):
         # Generate the first chapter
         print(f"Generating Chapter {chapter_number}")
@@ -128,3 +140,31 @@ if chatGPT_author_type in ["fiction", "sci-fi", "teen fantasy", "romance", "myst
         notes_taken = f"Notes_Taken.md"
         if notes_taken:
             write_file(notes_taken, story_continuation_deduped)
+
+# Story based functionality.
+if chatGPT_author_type in ["dungeons and dragons"]:
+    character_sheets = f"Character_Sheets.md"
+    if character_sheets:
+        write_file(character_response)
+    story_continuation = ""
+    story_continuation_deduped = ""
+    # Generate Characters and Defining traits
+    print(f"Generating Characters for your story.")
+    character_response = get_gpt_response(generate_questions(chatGPT_author_type, user_input, f"You need to create a list of characters and their stats in short form as well as personalities.\n {chapters}"))
+    for chapter_number, chapter in enumerate(chapters, start=1):
+        # Generate the first chapter
+        print(f"Generating Chapter {chapter_number}")
+        chapter_responses = get_gpt_response(generate_questions(chatGPT_author_type, user_input, f"List of all Chapters: ```{chapters}```\n\nThe current chapter you are writing: ```{chapter}```\n Characters in the story: ```{character_response}```\n Key information for the story so far:\n```{story_continuation_deduped}```\nMust be multiple choice for actions and outcomes taken within the story"))
+        # Extract key information from the current chapter for future chapters:
+        print(f"Extracting Key Information From Chapter {chapter_number}")
+        story_continuation += get_gpt_response(generate_questions(chatGPT_author_type, user_input, f"Extract only the key information from this such as names, places, important details such as relationships between characters: {chapter_responses}"))
+        story_continuation_deduped = get_gpt_response(generate_questions(chatGPT_author_type, user_input, f"Clean up these keynotes: ```{story_continuation}```"))
+        chapter_file_name = f"Chapter{chapter_number}.md"
+        write_file(chapter_file_name, chapter_responses)
+        notes_taken = f"Notes_Taken.md"
+        if notes_taken:
+            write_file(notes_taken, story_continuation_deduped)
+
+if chatGPT_author_type in ["fantasy", "children's book", "biography", "poetry"]:
+    print(f"Not included currently: {chatGPT_author_type}")
+    # For Childrens Book, I would like to have ChatGPT give areas and descriptions for where an image might be for the book.
